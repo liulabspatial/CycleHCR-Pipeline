@@ -1,4 +1,4 @@
-# ND2-to-N5 Converter
+# RSFISH and WarpSpot Pipeline
 
-A nextflow pipeline for ND2-to-N5 conversion. 
+A nextflow pipeline for RSFISH and warping spots. 
 
