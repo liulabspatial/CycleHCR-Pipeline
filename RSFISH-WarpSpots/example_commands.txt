@@ -1,0 +1,19 @@
+
+Example command:
+/home/liulab/labdata/nf/RSFISH-WarpSpots/rs_warp.sh -i /home/liulab/labdata/TestingDataSets/hpc_output/step1_multiTiles/b0/t1 -o /home/liulab/labdata/nf/rsw/out -r /home/liulab/labdata/nf/rsw/spots -x /home/liulab/labdata/TestingDataSets/hpc_output/step2/transform -w 10 -d c3 -s s2 -- "--rsfish_gb_per_core 8 --rsfish_min 0 --rsfish_max 4096 --rsfish_anisotropy 0.7 --rsfish_sigma 1.5 --rsfish_threshold 0.007 --iteration 5 --downsample_field_xy 4 --sqrt_order 2 --sqrt_iterations 5"
+
+
+Options:
+  -i, --input               path to an input n5 directory
+  -x, --transform           path to a transform directory
+  -o, --outdir              path to an output directory
+  -r, --rsoutdir            path to a rsfish output directory
+  -n, --basename            base name of an output data.
+  -d, --dapi                channel id of a dapi channel.
+  -s, --scale               target scale level for rsfish.
+  -t, --thread              number of threads for bigstream
+  -w, --worker              number of workers for rsfish
+  -c, --core                number of cores per worker for rsfish
+  -f, --force               overwrite existing results
+  --                        extra parameters
+

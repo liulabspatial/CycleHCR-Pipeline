@@ -1,0 +1,25 @@
+# Create final image
+FROM condaforge/mambaforge as builder
+
+RUN mamba create -n myenv -c conda-forge python tqdm numpy scikit-image \
+        z5py dask dask-image tifffile nd2 -y \
+    && mamba run -n myenv pip install xarray-multiscale fibsem-tools \
+    && mamba clean --tarballs -y \
+    && mkdir -p /opt/conda/envs/myenv/etc/conda/activate.d \
+    # It's necessary to set TMPDIR for running with Singularity, because /opt/conda will be read-only
+    && echo "export TMPDIR=/tmp" > /opt/conda/envs/myenv/etc/conda/activate.d/env_vars.sh
+
+# ps is needed by nextflow to collect task metrics
+RUN apt-get install -y procps
+
+COPY scripts /app
+
+#ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "myenv", "python", "run.py"]
+
+RUN echo "#!/bin/bash" >> /entrypoint.sh \
+    && echo "source /opt/conda/etc/profile.d/conda.sh" >> /entrypoint.sh \
+    && echo "SCRIPT_NAME=\$1; shift" >> /entrypoint.sh \
+    && echo "conda activate myenv" >> /entrypoint.sh \
+    && echo 'python /app/${SCRIPT_NAME}.py "$@"' >> /entrypoint.sh \
+    && chmod +x /entrypoint.sh
+#ENTRYPOINT [ "/entrypoint.sh" ]

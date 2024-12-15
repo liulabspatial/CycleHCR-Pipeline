@@ -1,0 +1,22 @@
+./main.nf -profile localdocker \
+	--runtime_opts "-v $PWD/local:$PWD/local" \
+	--workers 2 \
+	--worker_cores 1 \
+	--gb_per_core 4 \
+	--driver_cores 1 \
+	--driver_memory 2g \
+	--driver_stack_size 64m \
+	--driver_logconfig $PWD/examples/spark-conf/log4j.properties \
+	--spark_work_dir $PWD/local \
+	--app $PWD/local/app.jar \
+	--app_main org.janelia.colormipsearch.cmd.SparkMainEntry \
+	--app_args \
+	"searchLocalFiles \
+	-m $PWD/local/testData/masks/ch2ch_2_mask.png \
+	-i $PWD/local/testData/flyem/766255970_RT_18U_FL-02_CDM.tif \
+	--mirrorMask \
+	--xyShift 2 \
+	--pctPositivePixels 2 \
+	--pixColorFluctuation 1 \
+	-od $PWD/local/testData/cdsresults.test" \
+	--app_log colordepthsearch.log

@@ -1,0 +1,15 @@
+Usage: crop_s0.sh [OPTION]... [FILE]
+cropping s0 level
+
+Options:
+  -o, --output            path to an output directory
+  --step1                 output directory of step1
+  --step2                 output directory of step2, has subdirectory transform
+  --fix                   path to fix N5 used to perform registration in step2 (e.g. b0/t0)
+  --seg                   path to segmentation tiff from cellpose
+  --idx                   comma separated list of index
+  -h, --help              display this help and exit
+
+
+example:
+./crop_s0 -o /mnt/d/Docker_bigstream_spots/pipeline_mimic_pad/croptest2 --step1 /mnt/d/Docker_bigstream_spots/pipeline_mimic_pad/step1_multiTiles_pad --step2 /mnt/d/Docker_bigstream_spots/pipeline_mimic_pad/step2_multiTiles_pad --fix b0/t0 --seg /mnt/d/Docker_bigstream_spots/pipeline_mimic_pad/step4_mimic/Mask_b0_t0_c3_s2.tiff --idx 2000,4000 
