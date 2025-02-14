@@ -1,3 +1,10 @@
+# User Manual
+
+https://github.com/liulabspatial/CycleHCR-Pipeline/blob/main/Usermanual_quickguide.pdf  
+<br>   
+
+--- 
+ 
 # Installation Guide: SingularityCE and Nextflow on Ubuntu
 
 This guide provides step-by-step instructions for installing **SingularityCE** and **Nextflow** on Ubuntu. The instructions have been tested on Ubuntu 20.04 LTS and 22.04 LTS. Other versions may also work similarly. You will need `sudo` privileges.
