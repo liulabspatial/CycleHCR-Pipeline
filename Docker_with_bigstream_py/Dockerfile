@@ -1,4 +1,4 @@
-FROM condaforge/mambaforge as builder
+FROM condaforge/mambaforge:latest AS builder
 
 # create conda environment, python 3.11+ is needed for new bigstream
 # install bigstream by pip
@@ -7,7 +7,7 @@ FROM condaforge/mambaforge as builder
 
 # install openGL things bigstream seems to require, these are global packages and are accessible by all conda environment
 # deals with interactive prompt
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # install global packages
 RUN apt-get update -y \
@@ -16,7 +16,7 @@ RUN apt-get update -y \
 
 # set up conda environment and install bigstream
 RUN mamba create -n myenv -c conda-forge python=3.11 \
-    && mamba run -n myenv pip install bigstream==1.4.1 \
+    && mamba run -n myenv pip install bigstream==5.0.3 imagecodecs pandas zarr==2.18.1 numcodecs==0.12.1 \
     && mamba clean --tarballs -y \
     && mkdir -p /opt/conda/env/myenv/etc/conda/activate.d \
     && echo "export TMPDIR=/tmp" > /opt/conda/env/myenv/etc/conda/activate.d/env_vars.sh

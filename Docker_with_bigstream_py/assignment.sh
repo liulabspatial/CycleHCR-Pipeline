@@ -80,17 +80,6 @@ do
 	esac
 done
 
-# Absolute path to this script, e.g. /home/user/bin/foo.sh
-SCRIPT=$(readlink -f "$0")
-# Absolute path this script is in, thus /home/user/bin
-SCRIPTPATH=$(dirname "$SCRIPT")
-cd $SCRIPTPATH
-
-SIFFILE="bigstream-py-0.0.10.sif"
-if [ ! -f "$SIFFILE" ]; then
-    singularity build "$SIFFILE" docker://ghcr.io/janeliascicomp/bigstream-py:0.0.10.sif
-fi
-
 echo "$input"
 echo "$output"
 IFS=',' read -r -a input_array <<< "$input"
@@ -100,11 +89,16 @@ real_output_path=$(realpath "$output")
 parent_outdir=$(dirname "$real_output_path")
 mkdir -p "$parent_outdir"
 
+# Absolute path to this script, e.g. /home/user/bin/foo.sh
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in, thus /home/user/bin
+SCRIPTPATH=$(dirname "$SCRIPT")
+
 echo singularity run \
         --env TINI_SUBREAPER=true \
         -B "$parent_indir":"$parent_indir" \
         -B "$parent_outdir":"$parent_outdir" \
-        ./bigstream-py-0.0.10.sif \
+        $SCRIPTPATH/ghcr.io-janeliascicomp-bigstream-py-0.0.16.img \
         /entrypoint.sh spot_assignment \
         -i $input \
         -o $output \
@@ -116,7 +110,7 @@ singularity run \
         --env TINI_SUBREAPER=true \
         -B "$parent_indir":"$parent_indir" \
         -B "$parent_outdir":"$parent_outdir" \
-        ./bigstream-py-0.0.10.sif \
+        $SCRIPTPATH/ghcr.io-janeliascicomp-bigstream-py-0.0.16.img \
         /entrypoint.sh spot_assignment \
         -i $input \
         -o $output \

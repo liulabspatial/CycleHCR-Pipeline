@@ -3,6 +3,17 @@
 https://github.com/liulabspatial/CycleHCR-Pipeline/blob/main/Usermanual_quickguide.pdf  
 <br>   
 
+---
+
+## Acknowledgments
+
+This pipeline uses modified code from the following repositories:
+
+- [JaneliaSciComp/containers](https://github.com/JaneliaSciComp/containers)
+- [JaneliaSciComp/nextflow-modules](https://github.com/JaneliaSciComp/nextflow-modules)
+
+These repositories are licensed under the BSD 3-Clause License by Howard Hughes Medical Institute / Janelia Research Campus.
+
 --- 
  
 # Installation Guide: SingularityCE and Nextflow on Ubuntu

@@ -59,67 +59,74 @@ def main():
     re_setup = re.compile(r'^.*setup[0-9]+$')
     re_timepoint = re.compile(r'^.*timepoint[0-9]+$')
 
-    in_n5path = ""
+    zarr = False
+    in_n5path = None
     xml = ET.parse(input)
     for item in xml.findall(".//n5"):
         in_n5path = os.path.join(os.path.dirname(input), item.text)  
+    if in_n5path is None:
+        for item in xml.findall(".//zarr"):
+            in_n5path = os.path.join(os.path.dirname(input), item.text)
+            zarr = True
+
     
     out_n5path = output #os.path.join(output, "t" + str(time))
 
-    os.makedirs(out_n5path, exist_ok=True)
-
-    setupfolders = [ d.path for d in os.scandir(in_n5path) if d.is_dir() ]
-    for dirpath in setupfolders:
-        if re_setup.fullmatch(dirpath):
-            print(dirpath)
-            chints = [int(s) for s in re.findall("\d+", dirpath)]
-            chid = chints[-1]
-            tpfolders = [ d.path for d in os.scandir(dirpath) if d.is_dir() ]
-            for tppath in tpfolders:
-                if re_timepoint.fullmatch(tppath):
-                    print(tppath)
-                    ints = [int(s) for s in re.findall("\d+", tppath)]
-                    if ints[-1] == 0:
-                        shutil.move(tppath, os.path.join(out_n5path, "c" + str(chid)))
-                        print(os.path.join(out_n5path, "c" + str(chid)))
+    if zarr:
+        shutil.move(in_n5path, out_n5path)
+    else:
+        os.makedirs(out_n5path, exist_ok=True)
+        setupfolders = [ d.path for d in os.scandir(in_n5path) if d.is_dir() ]
+        for dirpath in setupfolders:
+            if re_setup.fullmatch(dirpath):
+                print(dirpath)
+                chints = [int(s) for s in re.findall("\d+", dirpath)]
+                chid = chints[-1]
+                tpfolders = [ d.path for d in os.scandir(dirpath) if d.is_dir() ]
+                for tppath in tpfolders:
+                    if re_timepoint.fullmatch(tppath):
+                        print(tppath)
+                        ints = [int(s) for s in re.findall("\d+", tppath)]
+                        if ints[-1] == 0:
+                            shutil.move(tppath, os.path.join(out_n5path, "c" + str(chid)))
+                            print(os.path.join(out_n5path, "c" + str(chid)))
     
-    re_ch = re.compile(r'^.*c[0-9]+$')
-
-    downsampling_factors = []
-    subfolders = [ d.path for d in os.scandir(out_n5path) if d.is_dir() ]
-    for dirpath in subfolders:
-        if re_ch.fullmatch(dirpath):
-            ch_attr = os.path.join(dirpath, "attributes.json")
-            if os.path.isfile(ch_attr):
-                with open(ch_attr, 'r+') as f:
-                    data = json.load(f)
-                    data['resolution'] = res
-                    data['backgroundValue'] = 0.0
-                    f.seek(0)
-                    json.dump(data, f, indent=4)
-                    f.truncate()
-            else:
-                print("No such file " + ch_attr)
-            s = 0
-            downsampling_factors = []
-            while os.path.exists(os.path.join(dirpath, "s"+str(s))):
-                s_attr = os.path.join(dirpath, "s"+str(s)+os.path.sep+"attributes.json")
-                with open(s_attr, 'r+') as f:
-                    data = json.load(f)
-                    downsampling_factors.append(data['downsamplingFactors'])
-                    data['pixelResolution'] = res
-                    f.seek(0)
-                    json.dump(data, f, indent=4)
-                    f.truncate()
-                s += 1
-    with open(os.path.join(out_n5path, "attributes.json"), 'w') as f:
-        data = {}
-        data['scales'] = downsampling_factors
-        data['pixelResolution'] = {"unit":"um","dimensions": res}
-        data['n5'] = "2.2.0"
-        f.seek(0)
-        json.dump(data, f, indent=4)
-        f.truncate()
+        re_ch = re.compile(r'^.*c[0-9]+$')
+        downsampling_factors = []
+        subfolders = [ d.path for d in os.scandir(out_n5path) if d.is_dir() ]
+        for dirpath in subfolders:
+            if re_ch.fullmatch(dirpath):
+                ch_attr = os.path.join(dirpath, "attributes.json")
+                if os.path.isfile(ch_attr):
+                    with open(ch_attr, 'r+') as f:
+                        data = json.load(f)
+                        data['resolution'] = res
+                        data['backgroundValue'] = 0.0
+                        f.seek(0)
+                        json.dump(data, f, indent=4)
+                        f.truncate()
+                else:
+                    print("No such file " + ch_attr)
+                s = 0
+                downsampling_factors = []
+                while os.path.exists(os.path.join(dirpath, "s"+str(s))):
+                    s_attr = os.path.join(dirpath, "s"+str(s)+os.path.sep+"attributes.json")
+                    with open(s_attr, 'r+') as f:
+                        data = json.load(f)
+                        downsampling_factors.append(data['downsamplingFactors'])
+                        data['pixelResolution'] = res
+                        f.seek(0)
+                        json.dump(data, f, indent=4)
+                        f.truncate()
+                    s += 1
+        with open(os.path.join(out_n5path, "attributes.json"), 'w') as f:
+            data = {}
+            data['scales'] = downsampling_factors
+            data['pixelResolution'] = {"unit":"um","dimensions": res}
+            data['n5'] = "2.2.0"
+            f.seek(0)
+            json.dump(data, f, indent=4)
+            f.truncate()
 
 if __name__ == '__main__':
     main()

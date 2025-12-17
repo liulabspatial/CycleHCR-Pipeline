@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# How I am running this thing #
+# 1. make docker: docker build -t mydocker .
+# 2. run mydocker using the following run_docker.sh
+
+
+
+INPUT="/mnt/f/docker_v14/test_ndtiff_zarr_padding0_2/"
+OUTPUT="/mnt/f/docker_v14/step2_loop_affine_s2_2/"
+FIX="t3"
+DAPI="c3"
+RES="s2"
+
+# create OUTPUT dir #
+if [ ! -d "$OUTPUT" ]; then
+    mkdir -p "$OUTPUT"
+    echo "Directory created: $OUTPUT"
+else
+    echo "Directory already exists: $OUTPUT"
+fi
+
+
+######## write function for registration to be gnu paralleled ########
+do_bigstream() {
+    fix=$1
+    mov=$2
+    out=$3
+    dapi=$4
+    res=$5
+
+    # get path of mask.tif from fix/mov path
+    fix_mask="$(dirname $fix)/$(basename $fix)_mask.tif"
+    mov_mask="$(dirname $mov)/$(basename $mov)_mask.tif"
+
+    # docker run, mount N5 data and output folder
+    # call entrypoint.sh, which consumes the name of the python script without .py
+    # list python parameters; double dash (--) are optional parameters
+    docker run \
+        --rm \
+        -v "$fix":"$fix" \
+        -v "$mov":"$mov" \
+        -v "$out":"$out" \
+        -v "$fix_mask":"$fix_mask" \
+        -v "$mov_mask":"$mov_mask" \
+        mydocker \
+        /entrypoint.sh bigstream_in_memory \
+        -f "$fix" \
+        -m "$mov" \
+        --fix_mask "$fix_mask" \
+        --mov_mask "$mov_mask" \
+        -s "$res" \
+        -d "$dapi" \
+        -o "$out" \
+        --deform 0 \
+        --aff_as 1 \
+        --aff_sf 2,1 \
+        --aff_ss 2,0 \
+        --aff_n 50 \
+        --def_as 1 \
+        --def_sf 2 \
+        --def_ss 0.25 \
+        --def_n 5 \
+        --def_cps 128
+}
+export -f do_bigstream
+##############################################
+
+################ get p_arr: imaging points in INPUT ################
+p_arr=()
+for p in "$INPUT"/*; do
+    [[ -d "$p" ]] || continue
+    p_arr+=("$p")
+done
+
+################### loop through p_arr ####################
+for p in "${p_arr[@]}"; do
+    ######## do_registration per imaging point, p #########
+    ### create analogous p directory in OUTPUT ###
+    OUTPUT_p="$OUTPUT"/"$(basename $p)"
+    if [ ! -d "$OUTPUT_p" ]; then
+        mkdir -p "$OUTPUT_p"
+        echo "Directory created: $OUTPUT_p"
+    else
+        echo "Directory already exists: $OUTPUT_p"
+    fi
+
+    ### store mov_arr ###
+    mov_arr=()
+    real_fix=$(realpath "$p"/"$FIX")
+
+    for t in "$p"/*; do
+        [[ -d "$t" ]] || continue
+        real_t=$(realpath "$t")
+        if [[ "$real_t" != "$real_fix" ]]; then
+            mov_arr+=("$real_t")
+        fi
+    done
+    printf "%s\n" "${mov_arr[@]}"
+
+    ### resaving fix timepoint, zarr to tiff ###
+    docker run \
+            --rm \
+            -v "$real_fix":"$real_fix" \
+            -v "$OUTPUT_p":"$OUTPUT_p" \
+            mydocker \
+            /entrypoint.sh fix_zarrtiff \
+            -f "$real_fix" \
+            -o "$OUTPUT_p" \
+            -s $RES
+
+    ### parallel registration over mov_arr ###
+    # fix and output directory doesn't change #
+    parallel --jobs=8 --verbose do_bigstream ::: "$real_fix" ::: ${mov_arr[@]} ::: "$OUTPUT_p" ::: "$DAPI" ::: "$RES"
+
+done
+
+
+
+
+

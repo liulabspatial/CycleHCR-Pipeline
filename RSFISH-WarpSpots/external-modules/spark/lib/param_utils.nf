@@ -5,6 +5,7 @@ def default_spark_params() {
         spark_container_version : '3.0.1-hadoop3.2',
         spark_local_dir : "/tmp/spark-${workflow.sessionId}",
         spark_work_dir : "${workDir}/spark/${workflow.sessionId}",
+        work_dir :  "${workDir}/spark/${workflow.sessionId}",
         workers : 3,
         app : 'local/app.jar',
         app_main : '',

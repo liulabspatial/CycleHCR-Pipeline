@@ -107,8 +107,7 @@ def main():
     ijargs2 += ";"
     ijargs2 += "select=" + input + " process_angle=[All angles] process_channel=[All channels] process_illumination=[All illuminations] process_tile=[All tiles] process_timepoint=[All Timepoints] relative=2.500 absolute=3.500 global_optimization_strategy=[Two-Round using Metadata to align unconnected Tiles and iterative dropping of bad links] fix_group_0-0"
     ijargs2 += ";"
-    ijargs2 += "select=" + input +  " process_angle=[All angles] process_channel=[All channels] process_illumination=[All illuminations] process_tile=[All tiles] process_timepoint=[All Timepoints] icp_refinement_type=[Expert ...] global_optimization_strategy=[Two-Round: Handle unconnected tiles, remove wrong links RELAXED (5.0x / 7.0px)] interest_points=forICP_2_1 icp_maximum_error=5 transformation=Affine regularize_model model_to_regularize_with=Translation lambda=0.10 group_channels=[Group all]"
-
+    ijargs2 += "select=" + input +  " process_angle=[All angles] process_channel=[All channels] process_illumination=[All illuminations] process_tile=[All tiles] process_timepoint=[All Timepoints] icp_refinement_type=[Simple (tile registration)] downsampling=[Downsampling 8/8/4] interest=[Average Threshold] icp_max_error=[Normal Adjustment (<5px)]"
     ijargs2 += ";"
     ijargs2 += str(threadnum)
     commands = []

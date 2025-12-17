@@ -56,7 +56,7 @@ def custom_filter_min(block):
         for y in range(1, block.shape[1] - 1):
             for x in range(1, block.shape[2] - 1):
                 val = block[z, y, x]
-                if val != 0:
+                if val == 0:
                     neighbors = [block[z-1, y, x], block[z+1, y, x], block[z, y-1, x], block[z, y+1, x], block[z, y, x-1], block[z, y, x+1]]
                     array_1d = np.array(neighbors)
                     min_val = array_1d.min()

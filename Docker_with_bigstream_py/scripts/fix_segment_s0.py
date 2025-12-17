@@ -123,7 +123,7 @@ def main():
             fix_crop_s0_i = make_crop(fix,zyxi_s0[i],zyxf_s0[i])
             fixfile_prefix = 'fix_'+fixBT[0]+'_'+fixBT[1]+'_'+str(c)+'_s0_'+str(seg_idx_lst[i])
             fix_tiff = os.path.join(args.outdir,fixfile_prefix+'.tiff')
-            tifffile.imwrite(fix_tiff,np.multiply(fix_crop_s0_i,seg_crop_s0_i),imagej=True, metadata={'axes': 'ZYX'})
+            tifffile.imwrite(fix_tiff,np.multiply(fix_crop_s0_i,seg_crop_s0_i), metadata={'axes': 'ZYX'})
 
 
 

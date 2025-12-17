@@ -36,6 +36,67 @@ def get_chunk_size_at_position(position, chunk_size, dataset_shape):
     actual_chunk_size = [end - start for start, end in zip(chunk_start, chunk_end)]
     return tuple(actual_chunk_size)
 
+def check_empty_chunk(in_dataset, idx):
+    """
+    Check if a chunk is empty (missing or contains NaN/infinite values).
+    
+    :param in_dataset: Input dataset
+    :param idx: Chunk index
+    :return: True if chunk is empty, False otherwise
+    """
+    try:
+        # Attempt to read the chunk
+        data_chunk = in_dataset.read_chunk(idx)
+        if data_chunk is None:
+            print(f"Chunk {idx} is missing.")
+            return True
+                    
+        # Check for NaNs or infinite values
+        if np.isnan(data_chunk).any() or np.isinf(data_chunk).any():
+            print(f"Chunk {idx} contains NaNs or infinite values. It will be marked as empty")
+            return True
+            
+    except Exception as e:
+        print(f"Error reading chunk {idx}: {e}")
+        return True
+    
+    return False
+
+def create_empty_chunk(in_dataset, out_dataset, idx, retry, wait):
+    """
+    Create and write an empty chunk to the output dataset.
+    
+    :param in_dataset: Input dataset (for getting chunk size and dtype)
+    :param out_dataset: Output dataset
+    :param idx: Chunk index
+    :param retry: Number of retry attempts
+    :param wait: Wait time between retries
+    :return: True if successful, False otherwise
+    """
+    try:
+        chunk_size = get_chunk_size_at_position(idx, in_dataset.chunks, in_dataset.shape)
+        data_chunk = np.zeros(chunk_size, dtype=in_dataset.dtype)
+        print(f"Empty chunk {idx} is created.")
+        
+        done = False
+        for i in range(0, retry):
+            try:
+                out_dataset.write_chunk(idx, data_chunk)
+                chk = validate_chunk(out_dataset, idx)
+                if chk == True:
+                    done = True
+                    break
+            except Exception as e:
+                print(f"Error writing empty chunk {idx}: {e}")
+            print(f"retry to write empty chunk {idx}")
+            time.sleep(wait)
+        
+        return done
+        
+    except Exception as e:
+        print(f"Error creating empty chunk {idx}: {e}")
+        return False
+
 def padding(data_chunk, median, amp):
     mm = median
 
@@ -215,6 +276,11 @@ def main():
 
     cluster = LocalCluster(n_workers=threadnum, threads_per_worker=1)
     client = Client(cluster)
+    
+    # Create a separate cluster for empty chunk creation with max 5 workers
+    empty_chunk_cluster = LocalCluster(n_workers=min(5, threadnum), threads_per_worker=1)
+    empty_chunk_client = Client(empty_chunk_cluster)
+    
     for g in group_paths:
         downsampling_factors = None
         pixel_resolution = None
@@ -230,6 +296,8 @@ def main():
         shape = n5input[g].shape
         chunks = n5input[g].chunks
         num_chunks = [int(np.ceil(s / c)) for s, c in zip(shape, chunks)]
+        
+        # First, compute histogram to get median value
         futures = []
         for idx in np.ndindex(*num_chunks):
             future = dask.delayed(compute_histogram2)(dataset=n5input[g], idx=idx, bins=bins, range=range)
@@ -241,11 +309,33 @@ def main():
         new_dataset_path = 'tmp_'+ g
         new_dataset = n5input.create_dataset(new_dataset_path, shape=n5input[g].shape, chunks=n5input[g].chunks, dtype=n5input[g].dtype)
         
-        futures = []
+        # Identify empty chunks for pre-creation with limited concurrency (max 5 threads)
+        print("Identifying empty chunks...")
+        empty_chunks = []
         for idx in np.ndindex(*num_chunks):
-            future = dask.delayed(padding2)(in_dataset=n5input[g], out_dataset=new_dataset, idx=idx, median=median_value, amp=10, retry=10, wait=5)
-            futures.append(future)
-        padding_results = dask.compute(futures)[0]
+            if check_empty_chunk(n5input[g], idx):
+                empty_chunks.append(idx)
+        
+        print(f"Found {len(empty_chunks)} empty chunks")
+        
+        # Create empty chunks first with limited concurrency (max 5 threads)
+        if empty_chunks:
+            print("Pre-creating empty chunks with limited concurrency...")
+            with empty_chunk_client.as_current():
+                empty_futures = []
+                for idx in empty_chunks:
+                    future = dask.delayed(create_empty_chunk)(in_dataset=n5input[g], out_dataset=new_dataset, idx=idx, retry=10, wait=5)
+                    empty_futures.append(future)
+                empty_results = dask.compute(empty_futures)[0]
+        
+        # Process ALL chunks with padding2 using full concurrency
+        print("Processing all chunks with padding2...")
+        with client.as_current():
+            padding_futures = []
+            for idx in np.ndindex(*num_chunks):
+                future = dask.delayed(padding2)(in_dataset=new_dataset, out_dataset=new_dataset, idx=idx, median=median_value, amp=10, retry=10, wait=5)
+                padding_futures.append(future)
+            padding_results = dask.compute(padding_futures)[0]
 
         if os.path.exists(os.path.join(base_path, new_dataset_path)):
             s_attr = os.path.join(base_path, new_dataset_path+os.path.sep+"attributes.json")
@@ -266,7 +356,8 @@ def main():
         except shutil.Error as e:
             print("Error moving the directory:", e)
 
-    
+    empty_chunk_client.close()
+    empty_chunk_cluster.close()
     client.close()
     cluster.close()
 

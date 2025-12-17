@@ -2,6 +2,11 @@ BSD 3-Clause License
 
 Copyright (c) 2024, Howard Hughes Medical Institute
 
+This software includes modified code from the following projects:
+- JaneliaSciComp/containers (https://github.com/JaneliaSciComp/containers)
+- JaneliaSciComp/nextflow-modules (https://github.com/JaneliaSciComp/nextflow-modules)
+Copyright (c) Howard Hughes Medical Institute / Janelia Research Campus
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 

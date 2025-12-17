@@ -1,8 +1,8 @@
 # Create final image
 FROM condaforge/mambaforge as builder
 
-RUN mamba create -n myenv -c conda-forge python tqdm numpy scikit-image \
-        z5py dask dask-image tifffile nd2 -y \
+RUN mamba create -n myenv -c conda-forge python=3.8 tqdm numpy=1.20 scikit-image=0.18 \
+        zarr=2.7 dask=2021.4 dask-image=0.5.0 tifffile nd2 -y \
     && mamba run -n myenv pip install xarray-multiscale fibsem-tools \
     && mamba clean --tarballs -y \
     && mkdir -p /opt/conda/envs/myenv/etc/conda/activate.d \

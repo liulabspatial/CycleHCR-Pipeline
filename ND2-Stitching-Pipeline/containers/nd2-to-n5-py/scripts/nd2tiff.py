@@ -22,6 +22,8 @@ from pathlib import Path
 
 import tifffile
 
+import time
+
 def get_key_index(dictionary, key):
     for i, k in enumerate(dictionary.keys()):
         if k == key:
@@ -62,6 +64,8 @@ def nd2tiff():
     print(tile_id)
 
     Path(outdir).mkdir(parents=True, exist_ok=True)
+
+    start_time = time.time()
 
     darray = nd2.imread(input, dask=True)
 
@@ -113,29 +117,50 @@ def nd2tiff():
     if timepoints_idx >= 0:
         if tiles_idx >= 0:
             if channels_idx >= 0:
-                output[:d, :h, :w] = darray[time_id, tile_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
+                region = darray[time_id, tile_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
             else:
-                output[:d, :h, :w] = darray[time_id, tile_id, :d, st_y:ed_y, st_x:ed_x]
+                region = darray[time_id, tile_id, :d, st_y:ed_y, st_x:ed_x]
         else:
             if channels_idx >= 0:
-                output[:d, :h, :w] = darray[time_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
+                region = darray[time_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
             else:
-                output[:d, :h, :w] = darray[time_id, :d, st_y:ed_y, st_x:ed_x]
+                region = darray[time_id, :d, st_y:ed_y, st_x:ed_x]
     else:
         if tiles_idx >= 0:
             if channels_idx >= 0:
-                output[:d, :h, :w] = darray[tile_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
+                region = darray[tile_id, :d, ch_id, st_y:ed_y, st_x:ed_x]
             else:
-                output[:d, :h, :w] = darray[tile_id, :d, st_y:ed_y, st_x:ed_x]
+                region = darray[tile_id, :d, st_y:ed_y, st_x:ed_x]
         else:
             if channels_idx >= 0:
-                output[:d, :h, :w] = darray[:d, ch_id, st_y:ed_y, st_x:ed_x]
+                region = darray[:d, ch_id, st_y:ed_y, st_x:ed_x]
             else:
-                output[:d, :h, :w] = darray[:d, st_y:ed_y, st_x:ed_x]
+                region = darray[:d, st_y:ed_y, st_x:ed_x]
+
+    end_time = time.time()
+    print(f"image loading: {end_time - start_time:.2f} sec")
+
+    output[:d, :h, :w] = region
 
     print(output.shape)
+    end_time = time.time()
+    print(f"image loaded: {end_time - start_time:.2f} sec")
+
+    start_time = time.time()
     
-    tifffile.imsave(outpath, output, compression=("ZLIB", 6))
+    output = np.expand_dims(output, axis=0)
+    output = np.expand_dims(output, axis=2)
+    tifffile.imwrite(
+        outpath,
+        output,
+        imagej=True,
+        metadata={'axes': 'TZCYX'},
+        compression="ZLIB",
+        compressionargs={"level": 1}
+    )
+
+    end_time = time.time()
+    print(f"image saved: {end_time - start_time:.2f} sec")
 
 def main():
     nd2tiff()

@@ -79,11 +79,6 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 cd $SCRIPTPATH
 
-SIFFILE="bigstream-py-0.0.10.sif"
-if [ ! -f "$SIFFILE" ]; then
-    singularity build "$SIFFILE" docker://ghcr.io/janeliascicomp/bigstream-py:0.0.10.sif
-fi
-
 fix=${step1dir}/${fix_subpath}
 
 # loop through batch, loop through time, save as n5_arr
@@ -115,7 +110,7 @@ do_cropping() {
         -B "$transformdir":"$transformdir" \
         -B "$seg":"$seg" \
         -B "$out":"$out" \
-        ./bigstream-py-0.0.10.sif \
+        $SCRIPTPATH/ghcr.io-janeliascicomp-bigstream-py-0.0.16.img \
         /entrypoint.sh bigstream_segment_s0 \
         -f "$fix" \
         -m "$mov" \
@@ -135,7 +130,7 @@ do_cropping_fix() {
         -B "$fix":"$fix" \
         -B "$seg":"$seg" \
         -B "$out":"$out" \
-        ./bigstream-py-0.0.10.sif \
+        $SCRIPTPATH/ghcr.io-janeliascicomp-bigstream-py-0.0.16.img \
         /entrypoint.sh fix_segment_s0 \
         -f "$fix" \
         -seg "$seg" \

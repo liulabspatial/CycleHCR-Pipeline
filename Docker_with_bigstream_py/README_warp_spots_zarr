@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# How I am running this thing #
+# 1. make docker: docker build -t mydocker .
+# 2. run mydocker using the following run_docker.sh
+
+step1_OUTPUT="/mnt/f/docker_v14/test_ndtiff_zarr_padding0_2/"
+step2_OUTPUT="/mnt/f/docker_v14/step2_loop_deform_s3_2/"
+step3_OUTPUT="/mnt/f/docker_v14/step3_loop_fake/"
+
+do_warp_spots() {
+    zarr=$1
+    transform_dir=$(realpath "$2"/"transform")
+    spots_dir=$(realpath "$3"/"spots")
+    out_dir="$3"/"spots_registered_deform1"
+
+    docker run \
+        -v "$zarr":"$zarr" \
+        -v "$transform_dir":"$transform_dir" \
+        -v "$spots_dir":"$spots_dir" \
+        -v "$out_dir":"$out_dir" \
+        mydocker \
+        /entrypoint.sh bigstream_warpspots_in_memory \
+        -z "$zarr" \
+        -td "$transform_dir" \
+        -sd "$spots_dir" \
+        -o "$out_dir" \
+        --downsample_field_xy 4 \
+        --iterations 5
+}
+export -f do_warp_spots
+
+################ get p_arr: imaging points in step1_OUTPUT ################
+p_arr=()
+for p in "$step1_OUTPUT"/*; do
+    [[ -d "$p" ]] || continue
+    p_arr+=("$p")
+done
+
+
+################### loop through p_arr ####################
+for p in "${p_arr[@]}"; do
+    # assumes OUTPUT_p exists from spot calling
+    OUTPUT_p="$OUTPUT"/"$(basename $p)"
+
+    ### store zarr_arr ###
+    zarr_arr=()
+    for t in "$p"/*; do
+        [[ -d "$t" ]] || continue
+        real_t=$(realpath "$t")
+        zarr_arr+=("$real_t")
+    done
+#    printf "%s\n" "${zarr_arr[@]}"
+
+    step2_OUTPUT_p=$(realpath "$step2_OUTPUT"/"$(basename $p)")
+    step3_OUTPUT_p=$(realpath "$step3_OUTPUT"/"$(basename $p)")
+#    echo $step2_OUTPUT_p
+#    echo $step3_OUTPUT_p
+    ### parallel warp spot over zarr_arr ###
+    parallel --jobs=4 --verbose do_warp_spots ::: ${zarr_arr[@]} ::: "$step2_OUTPUT_p" ::: "$step3_OUTPUT_p"
+
+done
+
