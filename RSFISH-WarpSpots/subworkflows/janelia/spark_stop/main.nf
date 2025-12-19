@@ -1,6 +1,6 @@
 process SPARK_TERMINATE {
     label 'process_single'
-    container 'ghcr.io/janeliascicomp/spark:3.1.3'
+    container 'ghcr.io/janeliascicomp/spark:3.3.2-scala2.12-java17-ubuntu24.04-gzip-zstd'
 
     input:
     // we need to pass the data_paths because it should contain the spark work dir

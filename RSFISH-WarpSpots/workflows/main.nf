@@ -141,6 +141,9 @@ workflow {
 
         // Find channel folders (c0, c1, c2, ...) in input_dirs[0]
         ch_input_images = Channel.fromPath("${input_dirs[0]}/c*", type: 'dir')
+            .filter { channel_folder ->
+                channel_folder.name != params.dapi_channel
+            }
             .map { channel_folder ->
                 def channel_name = channel_folder.name
                 def meta = [
@@ -163,14 +166,25 @@ workflow {
             'spark.serializer': 'org.apache.spark.serializer.KryoSerializer',
         ]
 
+        // Calculate workers per channel: rsfish_workers / number of channels, floor, min 1
+        // Count channel folders directly from filesystem (excluding dapi_channel)
+        def input_dir_path = final_params.input_dirs.split(',')[0]
+        def dapi_ch = params.dapi_channel
+        def channel_folders = file(input_dir_path).listFiles().findAll { f ->
+            f.isDirectory() && f.name.startsWith('c') && f.name != dapi_ch
+        }
+        def num_channels = channel_folders.size()
+        def workers_per_channel = Math.max(1, (int) Math.floor(final_params.rsfish_workers / num_channels))
+        log.info "Number of channels: ${num_channels}, workers per channel: ${workers_per_channel}"
+
         // Start Spark cluster
         SPARK_START(
             ch_meta_with_data,
             spark_config,
             true,
-            "/home/liulab/labdata/Takashi/spark/${workflow.sessionId}", //"${workDir}/spark/${workflow.sessionId}",
-            final_params.rsfish_workers,   // spark workers
-            final_params.rsfish_workers,   // required workers
+            "${workDir}/spark/${workflow.sessionId}",
+            workers_per_channel,   // spark workers
+            workers_per_channel,   // required workers
             final_params.rsfish_worker_cores,   // worker cpus
             final_params.rsfish_gb_per_core,   // gb_per_cpu
             final_params.rsfish_driver_cores,   // driver cpus
